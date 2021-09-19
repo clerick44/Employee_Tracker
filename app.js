@@ -1,30 +1,13 @@
 const db = require("./connections/connections");
+const ask = require("./utils/questions");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
 
-// const deptView = require("./utils/deptView");
-
-const initQuestions = [
-  {
-    type: "list",
-    message: "What would you like to do?",
-    choices: [
-      "View all departments",
-      "View all roles",
-      "View all employees",
-      "Add a department",
-      "Add a role",
-      "Add an employee",
-      "Update employee role",
-      "Quit",
-    ],
-    name: "initAnswer",
-  },
-];
+init();
 
 async function init() {
   try {
-    const { initAnswer } = await inquirer.prompt(initQuestions);
+    const { initAnswer } = await inquirer.prompt(ask.initQuestions);
     // console.log(initAnswer);
 
     switch (initAnswer) {
@@ -67,8 +50,6 @@ async function init() {
   }
 }
 
-init();
-
 function deptView() {
   db.query("SELECT * FROM department", function (err, res) {
     if (err) throw err;
@@ -94,7 +75,6 @@ function roleView() {
 
 function employeeView() {
   db.query(
-    // "SELECT CONCAT(m.first_name, ' ', m.last_name) AS manager FROM employee AS e LEFT JOIN employee AS m ON e.manager_id = m.id",
     `SELECT e.id, e.first_name, e.last_name, r.title, d.name AS department, r.salary, CONCAT(m.first_name, ' ', m.last_name) AS manager 
     FROM employee AS e 
     JOIN role AS r ON e.role_id = r.id 
@@ -106,4 +86,112 @@ function employeeView() {
       init();
     }
   );
+}
+
+async function addDepartment() {
+  const { deptName } = await inquirer.prompt(ask.addDeptQuestions);
+  console.log(deptName);
+  db.query("INSERT INTO department SET ?", { name: deptName }, function (err) {
+    if (err) throw err;
+    console.log("Department Succesfully Added!");
+    init();
+  });
+}
+
+function addRole() {
+  db.query(`SELECT * FROM department`, (err, data) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    const depData = data.map((department) => ({
+      name: department.name,
+      value: department.id,
+    }));
+
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          message: "What is the title of your new role?",
+          name: "roleTitle",
+        },
+        {
+          type: "input",
+          message: "What is the salary for this role?",
+          name: "roleSalary",
+        },
+        {
+          type: "list",
+          message: "What is the department id for this role?",
+          name: "roleDeptId",
+          choices: depData,
+        },
+      ])
+      .then((data) => {
+        db.query(
+          "INSERT INTO role SET ?",
+          {
+            title: data.roleTitle,
+            salary: data.roleSalary,
+            department_id: data.roleDeptId,
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("Role Succesfully Added!");
+            init();
+          }
+        );
+      });
+  });
+}
+
+function addEmployee() {
+  db.query(`SELECT * FROM department`, (err, data) => {
+    if (err) {
+      console.log(err);
+      return;
+    }
+
+    const depData = data.map((department) => ({
+      name: department.name,
+      value: department.id,
+    }));
+
+    inquirer
+      .prompt([
+        {
+          type: "input",
+          message: "What is the title of your new role?",
+          name: "roleTitle",
+        },
+        {
+          type: "input",
+          message: "What is the salary for this role?",
+          name: "roleSalary",
+        },
+        {
+          type: "list",
+          message: "What is the department id for this role?",
+          name: "roleDeptId",
+          choices: depData,
+        },
+      ])
+      .then((data) => {
+        db.query(
+          "INSERT INTO role SET ?",
+          {
+            title: data.roleTitle,
+            salary: data.roleSalary,
+            department_id: data.roleDeptId,
+          },
+          function (err) {
+            if (err) throw err;
+            console.log("Role Succesfully Added!");
+            init();
+          }
+        );
+      });
+  });
 }
