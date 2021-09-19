@@ -1,9 +1,8 @@
-// const express = require("express");
 const db = require("./connections/connections");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
 
-const deptView = require("./utils/deptView");
+// const deptView = require("./utils/deptView");
 
 const initQuestions = [
   {
@@ -25,13 +24,12 @@ const initQuestions = [
 
 async function init() {
   try {
-    const initAnswer = inquirer.prompt(initQuestions);
+    const { initAnswer } = await inquirer.prompt(initQuestions);
     // console.log(initAnswer);
 
     switch (initAnswer) {
       case "View all departments":
-        const depts = deptView();
-        console.table(depts);
+        deptView();
         break;
 
       case "View all roles":
@@ -60,6 +58,9 @@ async function init() {
 
       case "Quit":
         db.end;
+
+      default:
+        console.log("default");
     }
   } catch (err) {
     console.log(err);
@@ -68,6 +69,41 @@ async function init() {
 
 init();
 
-// db.query("SELECT * FROM employees_db.employee;", (err, results) => {
-//   console.log(results);
-// });
+function deptView() {
+  db.query("SELECT * FROM department", function (err, res) {
+    if (err) throw err;
+    // Log all results of the SELECT statement
+    console.table(res);
+    init();
+  });
+}
+
+function roleView() {
+  db.query(
+    `SELECT role.id, title, salary 
+    FROM role 
+    JOIN department ON role.department_id = department.id`,
+    function (err, res) {
+      if (err) throw err;
+      // Log all results of the SELECT statement
+      console.table(res);
+      init();
+    }
+  );
+}
+
+function employeeView() {
+  db.query(
+    // "SELECT CONCAT(m.first_name, ' ', m.last_name) AS manager FROM employee AS e LEFT JOIN employee AS m ON e.manager_id = m.id",
+    `SELECT e.id, e.first_name, e.last_name, r.title, d.name AS department, r.salary, CONCAT(m.first_name, ' ', m.last_name) AS manager 
+    FROM employee AS e 
+    JOIN role AS r ON e.role_id = r.id 
+    JOIN department AS d ON r.department_id = d.id
+    LEFT JOIN employee AS m ON e.manager_id = m.id`,
+    function (err, res) {
+      if (err) throw err;
+      console.table(res);
+      init();
+    }
+  );
+}
