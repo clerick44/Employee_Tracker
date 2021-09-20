@@ -55,4 +55,47 @@ module.exports = {
     message: "What is the name of your department?",
     name: "deptName",
   },
+
+  addEmpQuestions: (roles, employees) => [
+    {
+      type: "input",
+      message: "What is your employee's first name?",
+      name: "first_name",
+    },
+    {
+      type: "input",
+      message: "What is your employee's last name?",
+      name: "last_name",
+    },
+    {
+      type: "list",
+      message: "What is your employee's roleID?",
+      name: "role_id",
+      choices: roles,
+    },
+    {
+      type: "list",
+      message: "Who is your employee's manager?",
+      name: "manager_id",
+      choices: employees,
+    },
+  ],
+  updateEmpQuestions: (employees, roles) => [
+    {
+      type: "list",
+      message: "Choose an employee to update:",
+      name: "employee",
+      choices: () => {
+        return employees.map((employee) => employee.name);
+      },
+    },
+    {
+      type: "list",
+      message: "What is this employee's new role?",
+      name: "newRole",
+      choices: () => {
+        return roles.map((role) => role.title);
+      },
+    },
+  ],
 };

@@ -2,6 +2,7 @@ const db = require("./connections/connections");
 const ask = require("./utils/questions");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
+const { updateEmployee } = require("./utils/questions");
 
 init();
 
@@ -147,51 +148,68 @@ function addRole() {
   });
 }
 
-function addEmployee() {
-  db.query(`SELECT * FROM department`, (err, data) => {
-    if (err) {
-      console.log(err);
-      return;
-    }
+async function addEmployee() {
+  db.query(
+    "SELECT id as value, CONCAT(first_name, ' ', last_name) as name FROM employee",
+    async (err, employees) => {
+      db.query(
+        "SELECT id as value, title as name FROM role",
+        async (err, roles) => {
+          // get the name, category, starting bid from user
+          const newEmp = await inquirer.prompt(
+            ask.addEmpQuestions(roles, employees)
+          );
 
-    const depData = data.map((department) => ({
-      name: department.name,
-      value: department.id,
-    }));
-
-    inquirer
-      .prompt([
-        {
-          type: "input",
-          message: "What is the title of your new role?",
-          name: "roleTitle",
-        },
-        {
-          type: "input",
-          message: "What is the salary for this role?",
-          name: "roleSalary",
-        },
-        {
-          type: "list",
-          message: "What is the department id for this role?",
-          name: "roleDeptId",
-          choices: depData,
-        },
-      ])
-      .then((data) => {
-        db.query(
-          "INSERT INTO role SET ?",
-          {
-            title: data.roleTitle,
-            salary: data.roleSalary,
-            department_id: data.roleDeptId,
-          },
-          function (err) {
+          db.query("INSERT INTO employee SET ?", newEmp, function (err) {
             if (err) throw err;
-            console.log("Role Succesfully Added!");
+            console.log("New employee was added successfully!");
+            // re-prompt the user for if they want to bid or post
+            init();
+          });
+        }
+      );
+    }
+  );
+}
+
+async function updateEmpRole() {
+  // query for the category choices
+  db.query(
+    `SELECT id AS value, CONCAT(first_name, ' ', last_name) as name FROM employee`,
+    async (err, employees) => {
+      db.query(`SELECT id AS value, title FROM role`, async (err, roles) => {
+        console.log(employees);
+        console.log(roles);
+        // get the name, category, starting bid from user
+        //
+        const { newRole, employee } = await inquirer.prompt(
+          ask.updateEmpQuestions(employees, roles)
+        );
+        const newArray = employee.split(" ");
+        console.log(newArray);
+        // console.log(data);
+        console.log(employee);
+        console.log(newRole);
+        db.query(
+          "UPDATE employee SET ? WHERE ? AND ?",
+          [
+            {
+              role_id: newRole,
+            },
+            {
+              first_name: newArray[0],
+            },
+            { last_name: newArray[1] },
+          ],
+          function (err, res) {
+            if (err) throw err;
+            console.log(res.affectedRows + " products updated!\n");
+            // Call deleteProduct AFTER the UPDATE completes
+            console.table(employee);
             init();
           }
         );
       });
-  });
+    }
+  );
 }
