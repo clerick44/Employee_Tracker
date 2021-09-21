@@ -1,15 +1,17 @@
+//Linking all requirements
 const db = require("./connections/connections");
 const ask = require("./utils/questions");
 const inquirer = require("inquirer");
 const cTable = require("console.table");
 const { updateEmployee } = require("./utils/questions");
 
+//starts program
 init();
 
+//gives user prompts and calls functions based on response
 async function init() {
   try {
     const { initAnswer } = await inquirer.prompt(ask.initQuestions);
-    // console.log(initAnswer);
 
     switch (initAnswer) {
       case "View all departments":
@@ -41,25 +43,26 @@ async function init() {
         break;
 
       case "Quit":
-        db.end;
+        process.exit();
 
       default:
-        console.log("default");
+        process.exit();
     }
   } catch (err) {
     console.log(err);
   }
 }
 
+//queries db for list of all departments
 function deptView() {
   db.query("SELECT * FROM department", function (err, res) {
     if (err) throw err;
-    // Log all results of the SELECT statement
     console.table(res);
     init();
   });
 }
 
+//queries db for list of all employee roles
 function roleView() {
   db.query(
     `SELECT role.id, title, salary 
@@ -67,13 +70,13 @@ function roleView() {
     JOIN department ON role.department_id = department.id`,
     function (err, res) {
       if (err) throw err;
-      // Log all results of the SELECT statement
       console.table(res);
       init();
     }
   );
 }
 
+//queries db for list of all employees
 function employeeView() {
   db.query(
     `SELECT e.id, e.first_name, e.last_name, r.title, d.name AS department, r.salary, CONCAT(m.first_name, ' ', m.last_name) AS manager 
@@ -89,9 +92,10 @@ function employeeView() {
   );
 }
 
+//prompts user to create new department then inserts into db
 async function addDepartment() {
   const { deptName } = await inquirer.prompt(ask.addDeptQuestions);
-  console.log(deptName);
+
   db.query("INSERT INTO department SET ?", { name: deptName }, function (err) {
     if (err) throw err;
     console.log("Department Succesfully Added!");
@@ -99,18 +103,20 @@ async function addDepartment() {
   });
 }
 
+//prompts user to create new role then inserts into db
 function addRole() {
   db.query(`SELECT * FROM department`, (err, data) => {
     if (err) {
       console.log(err);
       return;
     }
-
+    //creates array of all departments to be used withing inquirer prompt
     const depData = data.map((department) => ({
       name: department.name,
       value: department.id,
     }));
 
+    //collects input from user about new role and inserts it into the db
     inquirer
       .prompt([
         {
@@ -125,7 +131,7 @@ function addRole() {
         },
         {
           type: "list",
-          message: "What is the department id for this role?",
+          message: "What is the department for this role?",
           name: "roleDeptId",
           choices: depData,
         },
@@ -148,22 +154,24 @@ function addRole() {
   });
 }
 
+//collects input from user about new employee and inserts it into the db
 async function addEmployee() {
   db.query(
-    "SELECT id as value, CONCAT(first_name, ' ', last_name) as name FROM employee",
+    //queries database to get employee information to be used in creating list for manager selection within inquirer
+    "SELECT id AS value, CONCAT(first_name, ' ', last_name) AS name FROM employee",
     async (err, employees) => {
       db.query(
-        "SELECT id as value, title as name FROM role",
+        //queries database to get role information to be used in creating list for new employee's role selection within inquirer
+        "SELECT id as value, title AS name FROM role",
         async (err, roles) => {
-          // get the name, category, starting bid from user
+          //prompts user for information about new employee
           const newEmp = await inquirer.prompt(
             ask.addEmpQuestions(roles, employees)
           );
-
+          //inserts new employee into db
           db.query("INSERT INTO employee SET ?", newEmp, function (err) {
             if (err) throw err;
             console.log("New employee was added successfully!");
-            // re-prompt the user for if they want to bid or post
             init();
           });
         }
@@ -172,44 +180,40 @@ async function addEmployee() {
   );
 }
 
+//collects input from user when changing employee's role
 async function updateEmpRole() {
-  // query for the category choices
   db.query(
+    //queries db to help create list of employees for user to select in inquirer
     `SELECT id AS value, CONCAT(first_name, ' ', last_name) as name FROM employee`,
     async (err, employees) => {
-      db.query(`SELECT id AS value, title FROM role`, async (err, roles) => {
-        console.log(employees);
-        console.log(roles);
-        // get the name, category, starting bid from user
-        //
-        const { newRole, employee } = await inquirer.prompt(
-          ask.updateEmpQuestions(employees, roles)
-        );
-        const newArray = employee.split(" ");
-        console.log(newArray);
-        // console.log(data);
-        console.log(employee);
-        console.log(newRole);
-        db.query(
-          "UPDATE employee SET ? WHERE ? AND ?",
-          [
-            {
-              role_id: newRole,
-            },
-            {
-              first_name: newArray[0],
-            },
-            { last_name: newArray[1] },
-          ],
-          function (err, res) {
-            if (err) throw err;
-            console.log(res.affectedRows + " products updated!\n");
-            // Call deleteProduct AFTER the UPDATE completes
-            console.table(employee);
-            init();
-          }
-        );
-      });
+      db.query(
+        //queries db to help create list of roles for user to select in inquirer
+        `SELECT id AS value, title AS name FROM role`,
+        async (err, roles) => {
+          //prompts user for information
+          const { newRole, employee } = await inquirer.prompt(
+            ask.updateEmpQuestions(employees, roles)
+          );
+          db.query(
+            //updates selected employee with new role
+            "UPDATE employee SET ? WHERE ? ",
+            [
+              {
+                role_id: newRole,
+              },
+              {
+                id: employee,
+              },
+            ],
+            function (err, res) {
+              if (err) throw err;
+              console.log(res.affectedRows + " employees updated!\n");
+              console.table(employee);
+              init();
+            }
+          );
+        }
+      );
     }
   );
 }
