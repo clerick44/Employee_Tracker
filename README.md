@@ -48,7 +48,7 @@ run node app
 
 ## Usage
 
-![Management app demo](assets/demo.gif)]()
+![Management app demo](assets/demo.gif)
 
 This program is free to use if you're an awesome dude/dudette!
 
